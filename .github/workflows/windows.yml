@@ -1,0 +1,27 @@
+name: Windows Phase 0
+on: [push, pull_request, workflow_dispatch]
+jobs:
+  build:
+    runs-on: windows-2022
+    strategy:
+      matrix:
+        configuration: [debug, release]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Pinned vcpkg
+        shell: pwsh
+        run: |
+          git clone https://github.com/microsoft/vcpkg.git .tools/vcpkg
+          git -C .tools/vcpkg checkout 6fdd23fa0a9479a9f9a1c48178696f60cf39255d
+          ./.tools/vcpkg/bootstrap-vcpkg.bat -disableMetrics
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Configure
+        shell: pwsh
+        run: |
+          $env:VCPKG_ROOT = "$PWD/.tools/vcpkg"
+          cmake --preset windows-vs2022-x64
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Build
+        run: cmake --build --preset windows-${{ matrix.configuration }}
+      - name: Unit tests (no audio hardware claims)
+        run: ctest --preset windows-${{ matrix.configuration }} --output-on-failure

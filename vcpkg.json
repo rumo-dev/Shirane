@@ -1,0 +1,10 @@
+{
+  "name": "shirane", "version-string": "0.1.0",
+  "builtin-baseline": "6fdd23fa0a9479a9f9a1c48178696f60cf39255d",
+  "dependencies": ["nlohmann-json", "spdlog", "gtest"],
+  "overrides": [
+    {"name": "nlohmann-json", "version": "3.12.0", "port-version": 2},
+    {"name": "spdlog", "version": "1.17.0", "port-version": 1},
+    {"name": "gtest", "version": "1.18.0"}
+  ]
+}

@@ -1,0 +1,6 @@
+/out/
+/.tools/
+/vcpkg_installed/
+/CMakeUserPresets.json
+*.user
+*.log
