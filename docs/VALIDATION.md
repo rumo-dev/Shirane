@@ -2,6 +2,7 @@
 
 ## Phase 2 Gain・独立Mixer — 2026-11-08
 
+- コミット32088adの[GitHub CI](https://github.com/rumo-dev/Shirane/actions/runs/42481696956)もDebug/Releaseビルド・各40/40テスト成功。
 - GainRamp、非RTパラメーター準備、固定16入力/2stereo BusのMixerを追加。UI/実音声には未接続。pan規則はAUDIO_ENGINE.mdとGUI tooltipへ明記。
 - Debug/Releaseビルド・単体各40/40成功、両構成の20frame起動終了smoke成功。
 - 新規10テスト: 無音/mono impulse、stereo sine/pan/headroom、Bus別solo/mute/master、途中変更を含む線形ランプ、1/63/64/128frames分割一致、48sample緊急ミュートとlatch、NaN/Inf/source無音化・subnormal・overflow、無効設定の保持、入力形状/重複/自己feedback拒否、割当監視・時間測定。
