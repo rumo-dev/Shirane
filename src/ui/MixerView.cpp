@@ -144,6 +144,7 @@ void sendControls(const char* id, const char* title, SendSettings& send, ImVec4 
     ImGui::SliderFloat("##gain", &send.gainDb, -60.0f, 6.0f, "%+.1f dB", ImGuiSliderFlags_AlwaysClamp);
     ImGui::SetNextItemWidth(-1);
     ImGui::SliderFloat("##pan", &send.pan, -1.0f, 1.0f, "PAN %+.2f", ImGuiSliderFlags_AlwaysClamp);
+    if (ImGui::IsItemHovered()) ImGui::SetTooltip("Equal-power: 中央は左右各 -3.01 dB。現在は希望設定のみ。");
     ImGui::Checkbox("Mute", &send.mute);
     ImGui::SameLine();
     ImGui::Checkbox("Solo", &send.solo);

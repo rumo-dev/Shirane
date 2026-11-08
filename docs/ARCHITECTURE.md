@@ -21,6 +21,8 @@ Phase 0・1はローカルGUI・実機確認とGitHub CIのDebug/Release単体�
 
 Phase 2着手: audio/coreにSpscQueueとAudioBufferPoolを追加。固定容量・OS非依存の基礎部品のみで、UI/DeviceServiceには未接続。キューはproducer/consumerを各1スレッドに固定し、プールの貸出・view取得・返却は同じ所有スレッドで行う。プールの生存中はアドレスを固定し、貸出先が終了するまで破棄しない。コピー可能なhandleは所有権移譲プロトコルではなく、他スレッドへの転送はまだ実装しない。
 
+Phase 2追加: audio/dspのGainRamp、audio/mixerのMixerを実装。非RTのPreparedMixerParameters::prepareがdB・panとBus別soloを検証・係数化し、将来のEngine所有スレッドがapply/processを呼ぶ。現時点では単体試験からのみ使用する。Mixerは16固定source slot、2つのstereo出力、全ランプ状態を所有する。入力spanを保持せず、出力は次回process/resetまでの借用とする。UIから可変状態を直接操作しない。唯一の並行操作requestEmergencyMuteはlock-free atomic latchを立て、解除は停止後resetだけに限定する。Control→Engineキューとの結合、Graph ACK、Clock/Meter、汎用DSP APIは未実装。
+
 設計版1.0 / 2026-11-07。開発規約はリポジトリルートの `AGENTS.md`、音声詳細は同階層の `AUDIO_ENGINE.md` を参照。本文の設定値は初期設計で、性能保証ではない。
 
 ## 1. 目的とスコープ

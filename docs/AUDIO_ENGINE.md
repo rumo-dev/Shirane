@@ -2,13 +2,13 @@
 
 ## 実装状況 — 調音 Shirane / 2026-11-07
 
-Phase 0のaudio coreは48,000 Hzの定数とUnavailable状態のみ。RT関数・音声スレッド・デバイス制御は未実装。
+Phase 0で48,000 Hzの定数とUnavailable状態を定義。現在も音声スレッド・デバイス制御は未実装だが、Phase 2のRT向けcore/Mixer関数は単体試験から使用できる。
 Phase 1では非RTのMMDevice列挙・変更通知登録、OSセッション音量の読取りを追加した。音声clientの開始・パケット取得・OS音量変更は行わない。
 デバイス選択は固定endpoint IDの希望設定で、切断時に別endpointへ自動変更しない。RT経路への追加はない。
 UIの抜差し検証はendpoint一覧と全体通知件数のみを観測する。音声client・バッファ・再生復旧の検証には代用しない。
 既定入力の変更・復帰の検証もUIスレッド上の一覧判定のみで、音声ルーティングの変更やRT処理は行わない。全体通知件数は特定endpointのcallbackの証明ではない。
 画面のsend・master値は希望設定であり、DSPや音声信号に適用されない。
-TODO: Phase 2で擬似信号・割当監視・時間測定を導入し、Phase 3以降で本書の実機受入を実施する。
+Phase 2のpool/SPSC・Mixerに擬似信号・C++割当監視・時間測定を導入済み。TODO: Clock/Meter・汎用DSP APIとPhase 2全体の受入、Phase 3以降の実機受入。
 現時点で低遅延、音質、安定性の実機性能を達成済みとしない。
 
 Phase 2の初期部品としてSpscQueue（release/acquire公開、満杯/空でfalse、待機なし）とAudioBufferPool（固定planar float32、mono/stereo、世代付きhandle）を実装した。容量はテンプレートで指定し、起動前に構築・全sample領域へ書込みする。ページ常駐は保証しない。貸出は範囲内sampleをゼロ初期化し、最大2×MaxFrames回に制限する。返却後のspan利用は禁止。世代上限のslotは再利用せず退役させる。プール不足・無効サイズはfalseとし出力handleを保持、無効handleのviewは空、二重返却はfalse。sampleを共有するクロススレッド所有権、packet adapter、high-water再同期は未実装。
@@ -30,6 +30,16 @@ Phase 2の初期部品としてSpscQueue（release/acquire公開、満杯/空で
 frameは全channelの同一時刻のsample集合。stereo 128 framesは256 samplesであり、128 samplesではない。48kHzでは64/128/256 framesが約1.333/2.667/5.333ms。これは1ブロックの時間で、入出力の実測遅延ではない。
 
 デバイスが44.1kHzやPCM16/24/32なら境界で変換する。WAVEFORMATEXTENSIBLEのvalid bitsとchannel maskを確認し、unsupported layoutは明示的なmatrixなしに処理しない。mono mic→stereoはL/Rへ同値複製、stereo panはequal-powerとし、中央の減衰規則をUIとテストに固定する。サンプル形式だけをfloatと読み替えない。
+
+### 実装済みMixerの数値・所有権契約（Phase 2）
+
+- 内部48kHz、0〜256frames、最大16source。monoはL/Rに複製してからpanを適用。stereoはクロスフィードなしのbalanceで、`L=cos((pan+1)π/4)`、`R=sin((pan+1)π/4)`、中央左右各−3.0103dB、端の反対側は厳密にゼロ。GUIのpan tooltipにも明記。
+- gain/masterは−60〜+6dB、panは−1〜+1。非有限値・範囲外はprepareが拒否し、以前の準備済み係数を保持。soloはBus単位、mute優先、muteされたsoloも他sourceを抑制する。
+- 係数変更は240sampleの線形振幅ランプ。同じtargetの再送では再開せず、途中変更は現在値から240sample。ブロックを分割しても結果は一致する。source不在時もランプ時刻は進む。
+- 緊急ミュートはprocess境界でlatchを読み、48sampleで両Busをゼロへ減衰。applyでは解除不可、停止後resetのみ解除。出力endpoint滞留を含む実際のミュート時間は未検証。
+- 入力NaN/Infはそのsourceの当該block全体を無音化しsource数を返す。subnormal入出力はゼロ。double加算でheadroomを維持し、float範囲超過は該当出力sampleをゼロにして計数（limiterではない）。
+- 入力source重複、slot範囲外、channel数/長さ異常、自己出力との重なりはInvalidInputと無音出力。256超のframe数は空出力。固定入力slot方式なので任意Graphの循環検証は対象外。外部spanの実メモリー寿命・非競合は呼出し側の契約。
+- Mixerは出力配列を自身で保有し、process中に確保・解放・待機・I/Oしない。下位GainRampは検証済み有限非負係数専用の内部部品。一般DSPのprepare/process/reset/latencyインターフェースへの統合は後続。
 
 ## 2. WASAPI Shared初期化
 

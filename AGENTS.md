@@ -1,6 +1,6 @@
 # AGENTS.md — Stream Audio Studio 開発規約
 
-製品名は「調音 Shirane」。2026-11-07にPhase 0実装を開始。2026-11-08にPhase 1の非RTデバイス列挙・通知登録・選択保存まで受入済み。次はPhase 2で、音声処理は未実装。実装状況と受入結果は `README.md` と `docs/VALIDATION.md` を参照する。本書の将来フェーズの契約は継続する。
+製品名は「調音 Shirane」。2026-11-07にPhase 0実装を開始。2026-11-08にPhase 1まで受入済み。現在はPhase 2のpool/SPSC・Gain・Mixerを擬似信号で検証中で、実音声の取得・再生は未実装。実装状況と受入結果は `README.md` と `docs/VALIDATION.md` を参照する。本書の将来フェーズの契約は継続する。
 
 本書はリポジトリルートに配置する。全体設計は `docs/ARCHITECTURE.md`、音声処理の契約は `docs/AUDIO_ENGINE.md` を参照する。配布時は3ファイルを同じフォルダーに置いているため、導入時に後者2つを `docs/` へ移動する。
 

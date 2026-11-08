@@ -1,5 +1,7 @@
 #include "audio/core/AudioBufferPool.h"
 #include "audio/core/SpscQueue.h"
+#include "audio/mixer/Mixer.h"
+#include <algorithm>
 #include <gtest/gtest.h>
 #include <chrono>
 #include <cstdlib>
@@ -137,5 +139,35 @@ TEST(AudioCoreRtTest, PreparedOperationsDoNotAllocateOrFree) {
     const auto elapsed = std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::steady_clock::now() - start).count();
     EXPECT_TRUE(correct); EXPECT_EQ(allocations, 0u); EXPECT_EQ(releases, 0u);
     RecordProperty("prepared_operations_100000_us", std::to_string(elapsed));
+}
+TEST(AudioCoreRtTest, MixerSixteenSourcesDoesNotAllocateAndRecordsTiming) {
+    Mixer mixer;
+    MixerParameters parameters;
+    for (auto& source : parameters.sources) for (auto& send : source) send.mute = false;
+    PreparedMixerParameters prepared;
+    ASSERT_TRUE(PreparedMixerParameters::prepare(parameters, prepared));
+    std::array<float, 128> samples{}; samples.fill(0.01f);
+    std::array<MixerInput, 16> inputs{};
+    for (std::size_t s = 0; s < inputs.size(); ++s) inputs[s] = {s, 2, {samples, samples}};
+    mixer.apply(prepared);
+    ASSERT_EQ(mixer.process(inputs, 128).status, MixStatus::Ok);
+    std::array<long long, 1000> nanoseconds{};
+    allocations = releases = 0;
+    bool correct = true;
+    for (auto& elapsed : nanoseconds) {
+        const auto start = std::chrono::steady_clock::now();
+        watching = true;
+        mixer.apply(prepared);
+        const auto result = mixer.process(inputs, 128);
+        watching = false;
+        elapsed = std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::steady_clock::now() - start).count();
+        correct &= result.status == MixStatus::Ok && result.invalidSources == 0 && result.overflowSamples == 0;
+    }
+    EXPECT_TRUE(correct); EXPECT_EQ(allocations, 0u); EXPECT_EQ(releases, 0u);
+    EXPECT_GT(mixer.output(Bus::Monitor, 0)[127], 0.1f);
+    std::sort(nanoseconds.begin(), nanoseconds.end());
+    RecordProperty("mixer_16_stereo_128frames_p50_ns", std::to_string(nanoseconds[499]));
+    RecordProperty("mixer_16_stereo_128frames_p99_ns", std::to_string(nanoseconds[989]));
+    RecordProperty("mixer_16_stereo_128frames_max_ns", std::to_string(nanoseconds.back()));
 }
 }

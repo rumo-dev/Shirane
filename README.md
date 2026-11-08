@@ -1,8 +1,8 @@
 # 調音 Shirane
 
-Windows 11 x64向け配信ミキサー。Phase 0受入済み、現在は **Phase 1（デバイス）** を実装中です。
+Windows 11 x64向け配信ミキサー。Phase 0・1受入済み、現在は **Phase 2（音声コア）** を実装中です。
 マイク・ゲーム・Discord・ブラウザー・音楽のMonitor / Stream希望設定を独立編集できます。
-**音声の取得・再生・DSP・OBS送出はまだ実装していません。** メーターは架空の信号を表示しません。
+**実音声の取得・再生・OBS送出はまだ実装していません。** コアのGain・独立2バスMixerは擬似信号で検証中で、画面の設定やデバイスには未接続です。メーターは架空の信号を表示しません。
 
 「デバイス / DEVICES」で実機の入力・出力一覧、アプリ別OSセッションと音量を確認できます。
 パネルが狭い場合は上の境界をドラッグして広げてください。
@@ -116,6 +116,7 @@ Phase 1の列挙・通知登録・選択保存を実装しました。2026-11-08
 - 既定入力の実機確認: デバイス画面の「既定の入力変更を確認」で開始し、Windows側で別入力へ変更。変更観測後に元へ戻します（180秒以内）。Shiraneの選択は固定し、結果を画面とログで確認します。このUIはWindows設定を変更しません。
 - TODO Phase 2: pool/SPSC、Mixer、DSP基礎。受入: 擬似信号、可変ブロック、RT割当ゼロ、時間測定。
 - Phase 2着手: 固定容量pool/SPSCとcoreテスト6件を追加。ローカルDebug/Releaseは各30/30成功。実音声には未接続で、Mixer/DSPなどPhase 2全体の受入はまだです。
+- Phase 2追加: GainRamp・16入力のMonitor/Stream Mixerを実装。gain/pan/mute/solo、240sampleの通常ランプ、48sampleの緊急ミュートを検証し、ローカルDebug/Release各40/40成功。pan中央は左右各−3.01dB、左右端では反対側をゼロにするequal-power balanceです。Phase 2全体は未受入です。
 - TODO Phase 3以降: 実音声取得と再生。受入は設計文書の各Phaseに従います。
 
 [開発規約](AGENTS.md) · [全体設計](docs/ARCHITECTURE.md) · [音声契約](docs/AUDIO_ENGINE.md)

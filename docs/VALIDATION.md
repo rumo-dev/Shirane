@@ -1,5 +1,15 @@
 # Shirane 検証記録
 
+## Phase 2 Gain・独立Mixer — 2026-11-08
+
+- GainRamp、非RTパラメーター準備、固定16入力/2stereo BusのMixerを追加。UI/実音声には未接続。pan規則はAUDIO_ENGINE.mdとGUI tooltipへ明記。
+- Debug/Releaseビルド・単体各40/40成功、両構成の20frame起動終了smoke成功。
+- 新規10テスト: 無音/mono impulse、stereo sine/pan/headroom、Bus別solo/mute/master、途中変更を含む線形ランプ、1/63/64/128frames分割一致、48sample緊急ミュートとlatch、NaN/Inf/source無音化・subnormal・overflow、無効設定の保持、入力形状/重複/自己feedback拒否、割当監視・時間測定。
+- 16stereo source×128frames×2Busを1,000block処理しC++割当・解放は0。直接C/OS割当の動的監視は未実装。RT呼出し経路を静的確認し、固定配列/有界ループのみ、COM/UI/ログ/待機/確保・解放なし。
+- 測定条件: Intel Core i7-14700、Windows build26200.9711、電源「高パフォーマンス」、MSVC14.44/SDK26100。全source入力0.01、gain0dB、pan中央、mute/soloなし、master0dB、48kHz想定。デバイス/driver/実周期/音声滞留は未使用。追加DSPなし。
+- 1block warmup後、steady_clockでapply+processを1,000回測定。入力有限チェック、出力クリア、全gainランプ・Bus加算を含む。nearest-rank p50/p99/max: Debug 158.5/187.8/230.0µs、Release 8.4/12.0/29.0µs。XMLはout/mixer-debug.xmlとout/mixer-release.xml。単発環境の測定値であり最悪時間保証や実機低遅延の達成ではない。
+- Phase 2全体は未受入。Clock/Meter・汎用DSP API・長時間転送、Control接続、異クロック/実音声検証は残る。
+
 ## Phase 2基礎バッファ — 2026-11-08
 
 - コミットfee3886の[GitHub CI](https://github.com/rumo-dev/Shirane/actions/runs/42480928920)もDebug/Releaseビルド・各30/30テスト成功。Phase 2全体の受入ではなく、この基礎部品の検証結果。
