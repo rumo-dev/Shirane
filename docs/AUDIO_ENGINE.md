@@ -11,6 +11,8 @@ UIの抜差し検証はendpoint一覧と全体通知件数のみを観測する�
 TODO: Phase 2で擬似信号・割当監視・時間測定を導入し、Phase 3以降で本書の実機受入を実施する。
 現時点で低遅延、音質、安定性の実機性能を達成済みとしない。
 
+Phase 2の初期部品としてSpscQueue（release/acquire公開、満杯/空でfalse、待機なし）とAudioBufferPool（固定planar float32、mono/stereo、世代付きhandle）を実装した。容量はテンプレートで指定し、起動前に構築・全sample領域へ書込みする。ページ常駐は保証しない。貸出は範囲内sampleをゼロ初期化し、最大2×MaxFrames回に制限する。返却後のspan利用は禁止。世代上限のslotは再利用せず退役させる。プール不足・無効サイズはfalseとし出力handleを保持、無効handleのviewは空、二重返却はfalse。sampleを共有するクロススレッド所有権、packet adapter、high-water再同期は未実装。
+
 設計版1.0 / 2026-11-07。全体設計は `ARCHITECTURE.md`、実装規約はルートの `AGENTS.md` を参照。本書の容量・閾値は初期値であり、実機測定後に変更記録を残して調整する。
 
 ## 1. フォーマットと時間単位

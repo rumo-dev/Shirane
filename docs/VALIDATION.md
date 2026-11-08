@@ -1,5 +1,17 @@
 # Shirane 検証記録
 
+## Phase 2基礎バッファ — 2026-11-08
+
+- 固定容量SpscQueueと単一所有スレッドのAudioBufferPoolを追加。音声エンジンには未接続。
+- Debug/Releaseビルド成功、単体各30/30成功（既存24件＋core6件）。初回のCTest複数ラベル引数による登録失敗は単一unitラベルへ修正。
+- キュー: 容量1/3/127、空・満杯、1万回の折返し、2スレッド100万payloadの順序・sample整合を確認。1時間/8時間耐久の代替ではない。
+- プール: 容量上限、1〜256frames、mono/stereo再利用、ゼロ初期化、他pool・古いhandle・二重返却の拒否を確認。
+- 独立テスト実行ファイルで通常/整列付きC++ new/deleteを監視。フック自身の検出を確認し、事前構築後10万回のacquire/view/push/pop/releaseで割当0・解放0。直接malloc/freeやOS割当の動的フックは未実装だが、対象ヘッダーを静的確認し、これらの呼出しはない。
+- 測定: Intel Core i7-14700、Windows build 26200.9711、電源「高パフォーマンス」、MSVC14.44、SDK26100。steady_clockで10万回の総時間を1回測定、Debug 65,693µs、Release 1,015µs。最適化・ループ・検証分岐を含む合計で、各操作の最悪時間や実音声性能を保証しない。
+- 測定構成: pool4×stereo256frames、使用frames1〜256、queue容量4で1件push後pop。デバイス/driver/実周期/DSPは未使用、音声滞留なし。XMLはローカルout/core-debug.xmlとout/core-release.xml。
+- [整列割当のMicrosoft資料](https://learn.microsoft.com/en-us/cpp/c-runtime-library/reference/aligned-malloc)に従い、テストフックのみで_aligned_malloc/_aligned_freeを対にして使用。製品coreは標準C++のみ。
+- Phase 2全体は未受入。Mixer/Bus、Gain/DSP API、Clock/Meter、音声信号テスト、長時間転送、処理時間分布の検証が残る。
+
 ## Phase 1受入 — 2026-11-08
 
 - 対象コミット: `d2bcfc48926edb734f0ca8982e54b4db707d14a1`。

@@ -115,6 +115,7 @@ Phase 1の列挙・通知登録・選択保存を実装しました。2026-11-08
 - Phase 1受入済み: 2026-11-08、[GitHub CI](https://github.com/rumo-dev/Shirane/actions/runs/42480242047)のDebug/Releaseビルド・単体各24/24成功と実機確認を完了。他機器の抜差しは未検証。
 - 既定入力の実機確認: デバイス画面の「既定の入力変更を確認」で開始し、Windows側で別入力へ変更。変更観測後に元へ戻します（180秒以内）。Shiraneの選択は固定し、結果を画面とログで確認します。このUIはWindows設定を変更しません。
 - TODO Phase 2: pool/SPSC、Mixer、DSP基礎。受入: 擬似信号、可変ブロック、RT割当ゼロ、時間測定。
+- Phase 2着手: 固定容量pool/SPSCとcoreテスト6件を追加。ローカルDebug/Releaseは各30/30成功。実音声には未接続で、Mixer/DSPなどPhase 2全体の受入はまだです。
 - TODO Phase 3以降: 実音声取得と再生。受入は設計文書の各Phaseに従います。
 
 [開発規約](AGENTS.md) · [全体設計](docs/ARCHITECTURE.md) · [音声契約](docs/AUDIO_ENGINE.md)

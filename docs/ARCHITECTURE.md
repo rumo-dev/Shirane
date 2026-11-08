@@ -19,6 +19,8 @@ Monitor/Stream操作は設定編集のみ。初期sendは全てmute、音声開�
 Phase 0・1はローカルGUI・実機確認とGitHub CIのDebug/Release単体成功により受入完了。次はPhase 2。受入記録は `VALIDATION.md` を参照。
 以下は将来の音声実装を含む設計仕様であり、実装済みを示さない。
 
+Phase 2着手: audio/coreにSpscQueueとAudioBufferPoolを追加。固定容量・OS非依存の基礎部品のみで、UI/DeviceServiceには未接続。キューはproducer/consumerを各1スレッドに固定し、プールの貸出・view取得・返却は同じ所有スレッドで行う。プールの生存中はアドレスを固定し、貸出先が終了するまで破棄しない。コピー可能なhandleは所有権移譲プロトコルではなく、他スレッドへの転送はまだ実装しない。
+
 設計版1.0 / 2026-11-07。開発規約はリポジトリルートの `AGENTS.md`、音声詳細は同階層の `AUDIO_ENGINE.md` を参照。本文の設定値は初期設計で、性能保証ではない。
 
 ## 1. 目的とスコープ

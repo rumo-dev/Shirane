@@ -3,7 +3,7 @@
 
 namespace shirane::audio {
 inline constexpr std::uint32_t kSampleRateHz = 48'000;
-// Phase 0: no audio workers, buffers, DSP or device ownership yet.
+// Core primitives are available; no running audio workers, DSP or device ownership yet.
 enum class EngineState { Unavailable };
 [[nodiscard]] EngineState engineState() noexcept;
 }
