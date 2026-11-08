@@ -4,8 +4,19 @@
 
 Phase 0の `Shirane`、`sas_ui`、`sas_config`、`sas_audio_core`、`sas_tests` を実装。
 UIスレッドが希望設定と描画資源を所有し、保存は明示操作で行う。現時点でControl・音声スレッドはない。
+Phase 1では `sas_platform` のDeviceServiceが専用MTAスレッドでデバイス・セッションを読取専用列挙する。
+MMDevice callbackは自己完結したatomic通知カウンターのみを更新。workerが250ms間隔で確認し、2秒ごとの一覧再取得も行う。
+UIはmutex保護した所有スナップショットをコピーし、COMポインターを受け取らない。
+セッションは時点一覧であり、短命セッションや生成イベントの完全追跡は未実装。
+schema 2にマイク・Monitor・Streamの固定endpoint IDを追加。schema 1は未選択へ移行し、欠損デバイスIDは保持する。
+既定変更は表示へ反映するが選択先は自動変更しない。同一Monitor/Stream出力は禁止。
+Phase 1の実機抜差しはUSB 2.0 Cameraのマイクで同一選択IDの復帰を確認。Windows既定入力の変更・復帰時も一覧追従と固定選択ID維持を確認済み。TODO: 新変更のCI。OS音量変更は任意機能として未実装。
+既定入力の検証補助DefaultDeviceCheckもUIが所有する。開始時のmultimedia既定IDとShiraneの選択IDを保持し、180秒以内の既定変更・復帰と各区間の全体通知増加を判定する。Windows設定の操作はユーザーが行い、判定器はOS設定を変更しない。
+Phase 1検証補助としてUI所有のDeviceCheckを追加。選択マイクの有効→消失/未接続→有効を、
+固定ID・新しいsnapshot generation・区間ごとの全体通知件数増加とともに120秒以内で観測する。
+一覧不完全、選択変更、通知不足、時間切れは未合格。擬似snapshotの単体試験と実機受入を区別する。
 Monitor/Stream操作は設定編集のみ。初期sendは全てmute、音声開始は無効。
-TODO: Phase 0の全受入後にPhase 1へ進む。受入記録は `VALIDATION.md` を参照。
+Phase 0はローカルGUI確認とGitHub CIのDebug/Release単体成功により受入完了。次はPhase 1。受入記録は `VALIDATION.md` を参照。
 以下は将来の音声実装を含む設計仕様であり、実装済みを示さない。
 
 設計版1.0 / 2026-11-07。開発規約はリポジトリルートの `AGENTS.md`、音声詳細は同階層の `AUDIO_ENGINE.md` を参照。本文の設定値は初期設計で、性能保証ではない。

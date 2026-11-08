@@ -30,6 +30,7 @@ Profile defaultProfile() {
     return profile;
 }
 bool validProfile(const Profile& profile) noexcept {
+    if (!validDeviceSelection(profile.devices)) return false;
     if (!validGain(profile.monitorMasterDb) || !validGain(profile.streamMasterDb) || profile.layout.size() > 262144) return false;
     for (std::size_t i = 0; i < profile.channels.size(); ++i) {
         const auto& channel = profile.channels[i];
@@ -45,7 +46,8 @@ StoreResult loadProfile(const std::filesystem::path& path, Profile& destination)
         std::ifstream input(path, std::ios::binary);
         if (!input) return {StoreCode::IoError, "設定ファイルを開けません"};
         const auto document = Json::parse(input);
-        if (!document.at("schemaVersion").is_number_integer() || document.at("schemaVersion") != Profile::kSchemaVersion)
+        const auto& version = document.at("schemaVersion");
+        if (!version.is_number_integer() || (version != 1 && version != Profile::kSchemaVersion))
             return {StoreCode::UnsupportedVersion, "未対応の設定バージョンです。元のファイルを保持しました"};
         Profile candidate;
         const auto& channels = document.at("channels");
@@ -58,6 +60,12 @@ StoreResult loadProfile(const std::filesystem::path& path, Profile& destination)
         candidate.monitorMasterDb = document.at("monitorMasterDb").get<float>();
         candidate.streamMasterDb = document.at("streamMasterDb").get<float>();
         candidate.layout = document.at("layout").get<std::string>();
+        // Schema 1 had no endpoint binding. Migration leaves all endpoints unselected.
+        if (version == 2) {
+            const auto& devices = document.at("devices");
+            candidate.devices = {devices.at("microphoneId").get<std::string>(),
+                devices.at("monitorId").get<std::string>(), devices.at("streamId").get<std::string>()};
+        }
         if (!validProfile(candidate)) return {StoreCode::Invalid, "設定値が範囲外です"};
         destination = std::move(candidate);
         return {};
@@ -77,7 +85,8 @@ StoreResult saveProfile(const std::filesystem::path& path, const Profile& profil
             channels.push_back({{"id", channel.id}, {"name", channel.name},
                 {"monitor", encodeSend(channel.monitor)}, {"stream", encodeSend(channel.stream)}});
         const Json document{{"schemaVersion", Profile::kSchemaVersion}, {"channels", channels},
-            {"monitorMasterDb", profile.monitorMasterDb}, {"streamMasterDb", profile.streamMasterDb}, {"layout", profile.layout}};
+            {"monitorMasterDb", profile.monitorMasterDb}, {"streamMasterDb", profile.streamMasterDb}, {"layout", profile.layout},
+            {"devices", {{"microphoneId", profile.devices.microphoneId}, {"monitorId", profile.devices.monitorId}, {"streamId", profile.devices.streamId}}}};
         if (!path.parent_path().empty()) std::filesystem::create_directories(path.parent_path());
         std::ofstream output(temporary, std::ios::binary | std::ios::trunc);
         if (!output) return {StoreCode::IoError, "一時設定ファイルを開けません"};

@@ -2,6 +2,7 @@
 #include <array>
 #include <filesystem>
 #include <string>
+#include "model/Devices.h"
 
 namespace shirane {
 struct SendSettings {
@@ -19,11 +20,12 @@ struct ChannelSettings {
     bool operator==(const ChannelSettings&) const = default;
 };
 struct Profile {
-    static constexpr int kSchemaVersion = 1;
+    static constexpr int kSchemaVersion = 2;
     std::array<ChannelSettings, 5> channels;
     float monitorMasterDb = 0.0f;
     float streamMasterDb = 0.0f;
     std::string layout;
+    DeviceSelection devices;
     bool operator==(const Profile&) const = default;
 };
 enum class StoreCode { Ok, Missing, Invalid, UnsupportedVersion, IoError };

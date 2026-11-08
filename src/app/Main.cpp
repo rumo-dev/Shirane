@@ -1,4 +1,5 @@
 #include "ui/MixerView.h"
+#include "platform/DeviceService.h"
 #include <Windows.h>
 #include <ShlObj.h>
 #include <d3d11.h>
@@ -47,7 +48,8 @@ public:
         std::filesystem::create_directories(directory);
         spdlog::set_default_logger(spdlog::rotating_logger_mt("shirane", (directory / "shirane.log").string(), 1024 * 1024, 3));
         spdlog::flush_on(spdlog::level::info);
-        spdlog::info("Shirane Phase 0 starting; audio unavailable");
+        spdlog::info("Shirane Phase 1 starting; audio unavailable");
+        shirane::DeviceService devices;
         const auto profilePath = directory / L"profile.json";
         auto profile = shirane::defaultProfile();
         shirane::ViewState view;
@@ -102,7 +104,23 @@ public:
                 createTarget();
             }
             ImGui_ImplDX11_NewFrame(); ImGui_ImplWin32_NewFrame(); ImGui::NewFrame();
+            if (devices.copyLatest(view.devices)) {
+                spdlog::debug("Device snapshot: endpoints={}, sessions={}, status={}, HRESULT={:08X}",
+                    view.devices.endpoints.size(), view.devices.sessions.size(), static_cast<int>(view.devices.status),
+                    static_cast<unsigned>(view.devices.nativeError));
+            }
+            const auto checkBefore = view.deviceCheck.state();
+            const auto defaultBefore = view.defaultCheck.state();
             shirane::drawStudio(profile, view);
+            if (checkBefore != view.deviceCheck.state()) {
+                spdlog::info("Device check state={} generation={} globalNotifications={}",
+                    static_cast<int>(view.deviceCheck.state()), view.devices.generation, view.devices.notificationCount);
+            }
+            if (defaultBefore != view.defaultCheck.state()) {
+                spdlog::info("Default input check state={} generation={} globalNotifications={}",
+                    static_cast<int>(view.defaultCheck.state()), view.devices.generation, view.devices.notificationCount);
+            }
+            if (view.refreshDevicesRequested) { devices.requestRefresh(); view.refreshDevicesRequested = false; }
             if (view.saveRequested) {
                 std::size_t size = 0;
                 const char* layout = ImGui::SaveIniSettingsToMemory(&size);

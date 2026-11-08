@@ -59,7 +59,7 @@ TEST_F(ProfileTest, CorruptAndMissingPreserveDestination) {
 TEST_F(ProfileTest, UnsupportedSchemasAreRejectedWithoutMutation) {
     auto profile = shirane::defaultProfile();
     const auto before = profile;
-    for (const int version : {0, 2}) {
+    for (const int version : {0, 3}) {
         { std::ofstream file(path); file << "{\"schemaVersion\":" << version << "}"; }
         EXPECT_EQ(shirane::loadProfile(path, profile).code, shirane::StoreCode::UnsupportedVersion);
         EXPECT_EQ(before, profile);
@@ -126,5 +126,67 @@ TEST_F(ProfileTest, UnicodeDirectoryRoundTrip) {
     loaded.streamMasterDb = -20;
     ASSERT_TRUE(shirane::loadProfile(nested, loaded).ok());
     EXPECT_EQ(loaded, original);
+}
+TEST_F(ProfileTest, SchemaOneMigratesWithoutSelectingDevicesOrRewritingFile) {
+    auto original = shirane::defaultProfile();
+    original.channels[0].stream.gainDb = -14;
+    ASSERT_TRUE(shirane::saveProfile(path, original).ok());
+    nlohmann::json legacy;
+    { std::ifstream input(path); input >> legacy; }
+    legacy["schemaVersion"] = 1;
+    legacy.erase("devices");
+    { std::ofstream output(path); output << legacy; }
+    auto loaded = shirane::defaultProfile();
+    ASSERT_TRUE(shirane::loadProfile(path, loaded).ok());
+    EXPECT_EQ(loaded, original);
+    nlohmann::json untouched;
+    { std::ifstream input(path); input >> untouched; }
+    EXPECT_EQ(untouched["schemaVersion"], 1);
+    ASSERT_TRUE(shirane::saveProfile(path, loaded).ok());
+    { std::ifstream input(path); input >> untouched; }
+    EXPECT_EQ(untouched["schemaVersion"], 2);
+}
+TEST_F(ProfileTest, EndpointIdsRoundTripEvenIfDeviceIsMissing) {
+    auto original = shirane::defaultProfile();
+    original.devices = {"missing-mic-id", "monitor-id", "stream-id"};
+    ASSERT_TRUE(shirane::saveProfile(path, original).ok());
+    auto restored = shirane::defaultProfile();
+    ASSERT_TRUE(shirane::loadProfile(path, restored).ok());
+    EXPECT_EQ(restored, original);
+}
+TEST_F(ProfileTest, DuplicateOutputsAndInvalidIdsAreRejected) {
+    auto profile = shirane::defaultProfile();
+    profile.devices = {"mic", "same", "same"};
+    EXPECT_FALSE(shirane::saveProfile(path, profile).ok());
+    profile.devices = {std::string(4097, 'x'), "", ""};
+    EXPECT_FALSE(shirane::validProfile(profile));
+    profile.devices = {std::string("mic\0other", 9), "", ""};
+    EXPECT_FALSE(shirane::validProfile(profile));
+    profile.devices = {"", "", ""};
+    ASSERT_TRUE(shirane::saveProfile(path, profile).ok());
+    nlohmann::json invalid;
+    { std::ifstream input(path); input >> invalid; }
+    invalid["devices"]["monitorId"] = "same";
+    invalid["devices"]["streamId"] = "same";
+    { std::ofstream output(path); output << invalid; }
+    EXPECT_EQ(shirane::loadProfile(path, profile).code, shirane::StoreCode::Invalid);
+    EXPECT_TRUE(profile.devices.monitorId.empty());
+}
+TEST(DeviceSelectionTest, StableIdentityAcrossRemovalReorderAndRename) {
+    using namespace shirane;
+    DeviceSnapshot snapshot;
+    snapshot.endpoints = {{"a", "Same name", DeviceFlow::Render, DeviceState::Active},
+                          {"b", "Same name", DeviceFlow::Render, DeviceState::Active}};
+    const std::string selected = "b";
+    ASSERT_NE(findEndpoint(snapshot, selected, DeviceFlow::Render), nullptr);
+    EXPECT_EQ(findEndpoint(snapshot, selected, DeviceFlow::Render)->id, "b");
+    snapshot.endpoints.pop_back();
+    EXPECT_EQ(findEndpoint(snapshot, selected, DeviceFlow::Render), nullptr);
+    snapshot.endpoints.insert(snapshot.endpoints.begin(), {"b", "Renamed", DeviceFlow::Render, DeviceState::Unplugged});
+    EXPECT_EQ(findEndpoint(snapshot, selected, DeviceFlow::Render)->state, DeviceState::Unplugged);
+    snapshot.endpoints.front().state = DeviceState::Active;
+    EXPECT_EQ(findEndpoint(snapshot, selected, DeviceFlow::Render)->name, "Renamed");
+    EXPECT_EQ(findEndpoint(snapshot, selected, DeviceFlow::Capture), nullptr);
+    EXPECT_EQ(findEndpoint(snapshot, "", DeviceFlow::Render), nullptr);
 }
 }
