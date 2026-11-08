@@ -112,7 +112,7 @@ Phase 0の受入はDebug/Release起動、Docking保存復元、CI単体成功で
 Phase 1の列挙・通知登録・選択保存を実装しました。2026-11-08にUSB 2.0 Cameraのマイクで抜差し・選択ID維持を確認済みです。
 
 - 2026-11-08にWindows既定入力の変更・復帰とShiraneの選択ID維持も実機確認済みです。
-- TODO Phase 1受入: 新しい変更のCI確認。他機器の抜差しは未検証。
+- Phase 1受入済み: 2026-11-08、[GitHub CI](https://github.com/rumo-dev/Shirane/actions/runs/42480242047)のDebug/Releaseビルド・単体各24/24成功と実機確認を完了。他機器の抜差しは未検証。
 - 既定入力の実機確認: デバイス画面の「既定の入力変更を確認」で開始し、Windows側で別入力へ変更。変更観測後に元へ戻します（180秒以内）。Shiraneの選択は固定し、結果を画面とログで確認します。このUIはWindows設定を変更しません。
 - TODO Phase 2: pool/SPSC、Mixer、DSP基礎。受入: 擬似信号、可変ブロック、RT割当ゼロ、時間測定。
 - TODO Phase 3以降: 実音声取得と再生。受入は設計文書の各Phaseに従います。
