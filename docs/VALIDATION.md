@@ -2,6 +2,7 @@
 
 ## Phase 2基礎バッファ — 2026-11-08
 
+- コミットfee3886の[GitHub CI](https://github.com/rumo-dev/Shirane/actions/runs/42480928920)もDebug/Releaseビルド・各30/30テスト成功。Phase 2全体の受入ではなく、この基礎部品の検証結果。
 - 固定容量SpscQueueと単一所有スレッドのAudioBufferPoolを追加。音声エンジンには未接続。
 - Debug/Releaseビルド成功、単体各30/30成功（既存24件＋core6件）。初回のCTest複数ラベル引数による登録失敗は単一unitラベルへ修正。
 - キュー: 容量1/3/127、空・満杯、1万回の折返し、2スレッド100万payloadの順序・sample整合を確認。1時間/8時間耐久の代替ではない。
