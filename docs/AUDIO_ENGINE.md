@@ -8,7 +8,7 @@ Phase 1では非RTのMMDevice列挙・変更通知登録、OSセッション音�
 UIの抜差し検証はendpoint一覧と全体通知件数のみを観測する。音声client・バッファ・再生復旧の検証には代用しない。
 既定入力の変更・復帰の検証もUIスレッド上の一覧判定のみで、音声ルーティングの変更やRT処理は行わない。全体通知件数は特定endpointのcallbackの証明ではない。
 画面のsend・master値は希望設定であり、DSPや音声信号に適用されない。
-Phase 2のpool/SPSC・Mixer・内部Clock・Meter・DSP共通APIに擬似信号・C++割当監視・時間測定を導入済み。TODO: 長時間転送とPhase 2全体の受入、Phase 3以降の実機受入。
+Phase 2のpool/SPSC・Mixer・内部Clock・Meter・DSP共通APIに擬似信号・C++割当監視・時間測定を導入済み。2026-11-09に両構成の単体51件と60秒連続転送・CI成功を合わせてコア範囲を受入済み。TODO: Phase 3以降の実音声実装と実機受入。
 現時点で低遅延、音質、安定性の実機性能を達成済みとしない。
 
 Phase 2の初期部品としてSpscQueue（release/acquire公開、満杯/空でfalse、待機なし）とAudioBufferPool（固定planar float32、mono/stereo、世代付きhandle）を実装した。容量はテンプレートで指定し、起動前に構築・全sample領域へ書込みする。ページ常駐は保証しない。貸出は範囲内sampleをゼロ初期化し、最大2×MaxFrames回に制限する。返却後のspan利用は禁止。世代上限のslotは再利用せず退役させる。プール不足・無効サイズはfalseとし出力handleを保持、無効handleのviewは空、二重返却はfalse。sampleを共有するクロススレッド所有権、packet adapter、high-water再同期は未実装。

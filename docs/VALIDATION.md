@@ -1,5 +1,13 @@
 # Shirane 検証記録
 
+## Phase 2コア受入 — 2026-11-09
+
+- 対象コミット90177a0。[GitHub CI](https://github.com/rumo-dev/Shirane/actions/runs/42620187895)のDebug/Releaseビルド、単体各51/51、擬似連続転送各1/1成功（Debug60.01秒、Release60.00秒）。ローカルも同じ試験と両構成の起動終了smoke成功。
+- pool/SPSC、独立Mixer/Bus、内部Clock、Meter、Gain/DSP APIについて、擬似信号・可変ブロック・所有権/境界・C++割当監視・静的RT確認・処理時間測定・60秒並行転送が完了。ARCHITECTUREのPhase 2コア範囲を受入済みとする。
+- 次はPhase 3のWASAPI Shared render/capture、IAudioClient3、MMCSS、mic Monitor。開始前に安全なmute/停止/失敗時動作を実装し、実機で周期・切断復旧・遅延・1時間glitchを評価する。
+- UIは引き続き希望設定のみ。実音声・device clock写像・異クロックSRC・Graph切替・1時間/8時間実音声耐久を達成済みとはしない。コアの受入はこれらの代用ではない。
+- 以下の「Phase 2未受入」「CI未確認」は当時の記録で、この受入結果により更新する。
+
 ## Phase 2連続転送 — 2026-11-09
 
 - 2スレッドの擬似信号を実時間60秒連続で転送。固定容量64packetのSPSC、consumer所有pool2×stereo256frames、Gain、独立2Bus Mixer、50ms Meter、内部Clockを通す。frame数1/64/128/256を循環し、開始時に満杯を意図的に発生させる。

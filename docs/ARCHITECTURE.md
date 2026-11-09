@@ -16,14 +16,14 @@ Phase 1検証補助としてUI所有のDeviceCheckを追加。選択マイクの
 固定ID・新しいsnapshot generation・区間ごとの全体通知件数増加とともに120秒以内で観測する。
 一覧不完全、選択変更、通知不足、時間切れは未合格。擬似snapshotの単体試験と実機受入を区別する。
 Monitor/Stream操作は設定編集のみ。初期sendは全てmute、音声開始は無効。
-Phase 0・1はローカルGUI・実機確認とGitHub CIのDebug/Release単体成功により受入完了。次はPhase 2。受入記録は `VALIDATION.md` を参照。
+Phase 0・1に加え、2026-11-09にPhase 2コアも擬似信号・単体・60秒連続転送・割当監視・時間測定・CI成功により受入完了。次はPhase 3のWASAPI実音声入出力。受入記録は `VALIDATION.md` を参照。
 以下は将来の音声実装を含む設計仕様であり、実装済みを示さない。
 
 Phase 2着手: audio/coreにSpscQueueとAudioBufferPoolを追加。固定容量・OS非依存の基礎部品のみで、UI/DeviceServiceには未接続。キューはproducer/consumerを各1スレッドに固定し、プールの貸出・view取得・返却は同じ所有スレッドで行う。プールの生存中はアドレスを固定し、貸出先が終了するまで破棄しない。コピー可能なhandleは所有権移譲プロトコルではなく、他スレッドへの転送はまだ実装しない。
 
 Phase 2追加: audio/dspのGainRamp、audio/mixerのMixerを実装。非RTのPreparedMixerParameters::prepareがdB・panとBus別soloを検証・係数化し、将来のEngine所有スレッドがapply/processを呼ぶ。現時点では単体試験からのみ使用する。Mixerは16固定source slot、2つのstereo出力、全ランプ状態を所有する。入力spanを保持せず、出力は次回process/resetまでの借用とする。UIから可変状態を直接操作しない。唯一の並行操作requestEmergencyMuteはlock-free atomic latchを立て、解除は停止後resetだけに限定する。Control→Engineキューとの結合、Graph ACKは未実装。
 
-Phase 2追加（2026-11-09）: AudioClockは内部48kHz frame/epochを管理し、device clockやQPCとの同期は行わない。IAudioProcessorとGainProcessorを追加し、prepare/破棄は非RT、process/resetは所有スレッドで有界処理する。Meterは50ms窓のpeak/RMSを専用固定容量SPSCで発行し、単一consumerへ所有コピーを渡す。満杯でもaudioを待たせない。mutable状態をUIへ公開せず、現在は接続単体試験のみ。長時間転送とPhase 2全体の受入確認を残す。
+Phase 2追加（2026-11-09）: AudioClockは内部48kHz frame/epochを管理し、device clockやQPCとの同期は行わない。IAudioProcessorとGainProcessorを追加し、prepare/破棄は非RT、process/resetは所有スレッドで有界処理する。Meterは50ms窓のpeak/RMSを専用固定容量SPSCで発行し、単一consumerへ所有コピーを渡す。満杯でもaudioを待たせない。mutable状態をUIへ公開せず、接続単体試験と60秒擬似連続転送まで確認済み。実音声には未接続。
 
 設計版1.0 / 2026-11-07。開発規約はリポジトリルートの `AGENTS.md`、音声詳細は同階層の `AUDIO_ENGINE.md` を参照。本文の設定値は初期設計で、性能保証ではない。
 
