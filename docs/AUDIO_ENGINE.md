@@ -229,6 +229,8 @@ mic Monitor目標10ms以下は、入力基準点→SAS→ヘッドホン出力�
 
 ## 12. 診断レポートと合否
 
+Phase 2の擬似連続試験は2スレッド間の固定容量SPSCでpayload所有コピーを渡す。frame数1/64/128/256を循環し、consumer側の単一所有pool、Gain、独立Mixer、Meter、Clockを通す。source順序・frame位置・全sample・Bus独立・meter窓・pool返却を検査する。満杯時のyield/再送は試験driverのみで、RT関数内に待機はない。この試験は実デバイスのpacket欠落ポリシーや異クロック補正を実装しない。
+
 レポート必須項目はOS build、CPU、driver、endpoint IDの匿名化値、native/内部format、P/Q、buffer capacity/target/実滞留、MMCSS、全DSPと遅延、負荷条件、試験時間、欠落/overflow/discontinuity、処理時間percentile、clock補正ppm、測定器と測定点。
 
 受入は機能ごとに判定する。目標未達をバッファ数だけで隠さず、低遅延設定と安定設定の両方の結果を残す。未対応機能、未実施テスト、外部仮想ケーブル等の前提を明記する。この文書の作成だけで実機性能を検証したとは扱わない。

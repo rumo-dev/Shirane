@@ -1,4 +1,4 @@
-name: Windows Phase 0
+name: Windows
 on: [push, pull_request, workflow_dispatch]
 jobs:
   build:
@@ -19,9 +19,11 @@ jobs:
         shell: pwsh
         run: |
           $env:VCPKG_ROOT = "$PWD/.tools/vcpkg"
-          cmake --preset windows-vs2022-x64
+          cmake --preset windows-vs2022-x64 -DSHIRANE_ENABLE_ENDURANCE_TESTS=ON
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
       - name: Build
         run: cmake --build --preset windows-${{ matrix.configuration }}
       - name: Unit tests (no audio hardware claims)
-        run: ctest --preset windows-${{ matrix.configuration }} --output-on-failure
+        run: ctest --preset windows-${{ matrix.configuration }} -L unit --output-on-failure
+      - name: Synthetic core transfer (60 seconds, no audio hardware)
+        run: ctest --preset windows-${{ matrix.configuration }} -L endurance --output-on-failure

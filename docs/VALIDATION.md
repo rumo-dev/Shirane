@@ -1,5 +1,21 @@
 # Shirane 検証記録
 
+## Phase 2連続転送 — 2026-11-09
+
+- 2スレッドの擬似信号を実時間60秒連続で転送。固定容量64packetのSPSC、consumer所有pool2×stereo256frames、Gain、独立2Bus Mixer、50ms Meter、内部Clockを通す。frame数1/64/128/256を循環し、開始時に満杯を意図的に発生させる。
+- 全packetのsequence/frame位置、全sampleの左右/Bus値、Meter peak/RMS/sequence、Clock積算、pool返却、停止後のqueue排出を検証。両構成成功、producer/consumer監視区間のC++割当・解放とも0。
+
+| 構成 | 実時間ms | block数 | frame数 | 満杯再試行数 | Meter窓数 |
+|---|---:|---:|---:|---:|---:|
+| Debug | 60,007 | 478,651 | 53,728,431 | 400,051,338 | 22,386 |
+| Release | 60,000 | 6,856,751 | 769,670,156 | 512,434,815 | 320,695 |
+
+- 再試行/yieldは試験driverのみ。満杯回数は音声glitch数ではない。実時間ペーシングせず可能な速度で計算し、frame数から実音声の試験時間を推定しない。欠落/重複/信号不一致0、Meter drop0、残存貸出0をassert。
+- 条件: Intel Core i7-14700、Windows build26200.9711、高パフォーマンス電源、MSVC14.44/SDK26100。48kHz想定、source L=(frame mod4)×0.125/R=−2L、Gain1、Monitor左端/Stream右端・両gain0dB。device/driver/実周期なし、キュー滞留は0〜64packet、追加DSPなし。steady_clockで60秒、結果XMLはout/endurance-Debug.xmlとout/endurance-Release.xml。
+- 通常単体は両構成51/51成功。任意CTest登録はenduranceラベル/90秒timeout。初回のGoogleTest起動フラグ誤記でusageが出た実行は未実施として扱い、正しいフラグで両60秒の完了とXMLを確認した。
+- CIにもunitとenduranceを別工程で追加。今回のCI結果確認後、Phase 2コア受入を判定する。
+- これは60秒の擬似転送試験であり、1時間/8時間の実音声耐久・実機低遅延・異クロックSRCの合格ではない。C/OS割当の動的フックは未実装で、対象経路は静的に呼出しなしを確認。
+
 ## Phase 2 Clock・Meter・DSP共通API — 2026-11-09
 
 - コミット368ccc2の[GitHub CI](https://github.com/rumo-dev/Shirane/actions/runs/42618651104)もDebug/Releaseビルド・各51/51テスト成功。

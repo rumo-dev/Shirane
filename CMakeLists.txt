@@ -60,4 +60,10 @@ gtest_discover_tests(sas_tests PROPERTIES LABELS unit
 add_executable(sas_core_tests tests/AudioCoreTests.cpp tests/MixerTests.cpp tests/ProcessorTests.cpp)
 shirane_target(sas_core_tests)
 target_link_libraries(sas_core_tests PRIVATE sas_audio_core GTest::gtest_main)
-gtest_discover_tests(sas_core_tests PROPERTIES LABELS unit TIMEOUT 30)
+gtest_discover_tests(sas_core_tests TEST_FILTER "-*DISABLED_*" PROPERTIES LABELS unit TIMEOUT 30)
+option(SHIRANE_ENABLE_ENDURANCE_TESTS "Register 60-second synthetic core transfer test" OFF)
+if(SHIRANE_ENABLE_ENDURANCE_TESTS)
+  add_test(NAME Core.SyntheticEndurance COMMAND sas_core_tests
+    --gtest_also_run_disabled_tests --gtest_filter=CoreEnduranceTest.DISABLED_ContinuousTransfer)
+  set_tests_properties(Core.SyntheticEndurance PROPERTIES LABELS endurance TIMEOUT 90)
+endif()

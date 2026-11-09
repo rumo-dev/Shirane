@@ -135,3 +135,5 @@ Phase 1参照:
 読取専用実機試験は `out/build/windows-vs2022-x64/Release/shirane_device_probe.exe`。
 ハードウェアなしは終了コード77（skip）、API失敗は非ゼロです。通常CIの単体には含めません。
 CTestに登録する場合はconfigure時に `-DSHIRANE_ENABLE_HARDWARE_TESTS=ON` を指定し、`-L hardware` で実行します。
+
+擬似音声コアの60秒連続転送試験は、configure時に `-DSHIRANE_ENABLE_ENDURANCE_TESTS=ON` を指定し、`ctest --preset windows-release -L endurance --output-on-failure` で実行できます。Debugも対応します。通常の単体確認は `-L unit`。CIは両構成で単体と連続転送を別工程として実行します。実音声・1時間/8時間耐久試験の代わりではありません。
