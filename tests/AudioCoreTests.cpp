@@ -1,6 +1,9 @@
 #include "audio/core/AudioBufferPool.h"
 #include "audio/core/SpscQueue.h"
 #include "audio/mixer/Mixer.h"
+#include "audio/core/AudioClock.h"
+#include "audio/dsp/GainProcessor.h"
+#include "audio/dsp/Meter.h"
 #include <algorithm>
 #include <gtest/gtest.h>
 #include <chrono>
@@ -169,5 +172,40 @@ TEST(AudioCoreRtTest, MixerSixteenSourcesDoesNotAllocateAndRecordsTiming) {
     RecordProperty("mixer_16_stereo_128frames_p50_ns", std::to_string(nanoseconds[499]));
     RecordProperty("mixer_16_stereo_128frames_p99_ns", std::to_string(nanoseconds[989]));
     RecordProperty("mixer_16_stereo_128frames_max_ns", std::to_string(nanoseconds.back()));
+}
+TEST(AudioCoreRtTest, GainMixerMeterClockChainHasNoAllocation) {
+    GainProcessor gain; IAudioProcessor& processor = gain;
+    Meter meter; Mixer mixer; AudioClock clock;
+    ASSERT_EQ(processor.prepare({48000, 256, 2}), ProcessorStatus::Ok);
+    ASSERT_EQ(gain.applyGain(1), ProcessorStatus::Ok);
+    ASSERT_EQ(meter.prepare({48000, 256, 2}), ProcessorStatus::Ok);
+    MixerParameters parameters;
+    for (auto& send : parameters.sources[0]) send = {0, -1, false, false};
+    PreparedMixerParameters prepared; ASSERT_TRUE(PreparedMixerParameters::prepare(parameters, prepared));
+    mixer.apply(prepared);
+    std::array<float, 128> left{}, right{};
+    const MixerInput input{0, 2, {left, right}};
+    std::array<long long, 1000> nanoseconds{};
+    allocations = releases = 0; bool correct = true; unsigned windows = 0;
+    MeterSnapshot snapshot;
+    for (auto& elapsed : nanoseconds) {
+        left.fill(0.1f); right.fill(0.2f);
+        const auto start = std::chrono::steady_clock::now();
+        watching = true;
+        correct &= processor.process({{left, right}, 128, 2}) == ProcessorStatus::Ok;
+        correct &= mixer.process({&input, 1}, 128).status == MixStatus::Ok;
+        correct &= meter.process({{mixer.output(Bus::Monitor, 0), mixer.output(Bus::Monitor, 1)}, 128, 2}) == ProcessorStatus::Ok;
+        correct &= clock.advance(128);
+        watching = false;
+        elapsed = std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::steady_clock::now() - start).count();
+        if (meter.tryRead(snapshot)) ++windows;
+    }
+    EXPECT_TRUE(correct); EXPECT_EQ(allocations, 0u); EXPECT_EQ(releases, 0u);
+    EXPECT_EQ(clock.position().frames, 128000u); EXPECT_EQ(windows, 53u);
+    EXPECT_NEAR(snapshot.rms[0], 0.1f, 1e-6f); EXPECT_EQ(snapshot.rms[1], 0);
+    std::sort(nanoseconds.begin(), nanoseconds.end());
+    RecordProperty("gain_mixer_meter_clock_128frames_p50_ns", std::to_string(nanoseconds[499]));
+    RecordProperty("gain_mixer_meter_clock_128frames_p99_ns", std::to_string(nanoseconds[989]));
+    RecordProperty("gain_mixer_meter_clock_128frames_max_ns", std::to_string(nanoseconds.back()));
 }
 }

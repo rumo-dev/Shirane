@@ -1,5 +1,16 @@
 # Shirane 検証記録
 
+## Phase 2 Clock・Meter・DSP共通API — 2026-11-09
+
+- AudioBlockのmutable/const view、内部AudioClock、IAudioProcessor/ProcessSpec/Status、GainProcessor、Meterを追加。製品のデバイス・GUIへは未接続。
+- Debug/Releaseビルド・単体各51/51成功。初回のテスト内空span初期化のコンパイルエラーは修正済み。
+- 追加11テスト: Clockの8時間相当frame計算・100ns絶対変換・epoch・overflow拒否、共通API経由のGainランプ/latency/安全処理、Meterの無音/impulse/sine、block分割一致、異常値/満杯drop、無効入力、1000窓の別スレッド読取り、Gain→Mixer→Meter→Clock接続。
+- 8時間相当は擬似frame計算であり、8時間の実行・音声耐久ではない。Meterの並行転送はsnapshot全体のpeak/RMSとsequence整合を検証し、欠落を許すUI用経路として扱う。
+- 接続処理を128frames×1000回実行し、C++割当・解放0。RT経路の静的確認でもOS/COM/UI/ログ/待機/確保・解放なし。直接C/OS割当の動的フックは未実装。
+- 測定条件: Intel Core i7-14700、Windows build26200.9711、電源「高パフォーマンス」、MSVC14.44/SDK26100。1stereo source（L=0.1/R=0.2）、48kHz、Gain振幅1、Mixer両Bus pan左端/gain0dB、Monitor Meter50ms、Clock advance128。device/driver/実周期/滞留未使用、その他DSPなし。
+- steady_clockでGain process＋Mixer process＋Meter process＋Clock advanceを1000回測定（初期ランプも含む、Meter読取りは測定外）。nearest-rank p50/p99/max: Debug132.8/253.7/337.1µs、Release7.0/11.6/22.5µs。out/processor-debug.xml、out/processor-release.xmlに記録。単発環境のコア計測で、最悪時間や実音声低遅延を保証しない。
+- 残る確認: 新変更のCI、長時間転送、Phase 2全体の受入。device同期・±ppm補正・SRC、Control接続と実音声は後続。
+
 ## Phase 2 Gain・独立Mixer — 2026-11-08
 
 - コミット32088adの[GitHub CI](https://github.com/rumo-dev/Shirane/actions/runs/42481696956)もDebug/Releaseビルド・各40/40テスト成功。

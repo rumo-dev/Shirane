@@ -1,4 +1,5 @@
 #pragma once
+#include "audio/core/AudioBlock.h"
 #include <array>
 #include <cstddef>
 #include <cstdint>
@@ -6,11 +7,6 @@
 #include <span>
 
 namespace shirane::audio {
-struct AudioBlockView {
-    std::array<std::span<float>, 2> channels{};
-    std::size_t frameCount = 0;
-    std::size_t channelCount = 0;
-};
 // Single owning thread for acquire/view/release. Borrowed views expire at release.
 // Construct before processing, keep address stable, destroy after all borrowers stop.
 template<std::size_t BlockCount, std::size_t MaxFrames>

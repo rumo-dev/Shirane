@@ -8,7 +8,7 @@ Phase 1では非RTのMMDevice列挙・変更通知登録、OSセッション音�
 UIの抜差し検証はendpoint一覧と全体通知件数のみを観測する。音声client・バッファ・再生復旧の検証には代用しない。
 既定入力の変更・復帰の検証もUIスレッド上の一覧判定のみで、音声ルーティングの変更やRT処理は行わない。全体通知件数は特定endpointのcallbackの証明ではない。
 画面のsend・master値は希望設定であり、DSPや音声信号に適用されない。
-Phase 2のpool/SPSC・Mixerに擬似信号・C++割当監視・時間測定を導入済み。TODO: Clock/Meter・汎用DSP APIとPhase 2全体の受入、Phase 3以降の実機受入。
+Phase 2のpool/SPSC・Mixer・内部Clock・Meter・DSP共通APIに擬似信号・C++割当監視・時間測定を導入済み。TODO: 長時間転送とPhase 2全体の受入、Phase 3以降の実機受入。
 現時点で低遅延、音質、安定性の実機性能を達成済みとしない。
 
 Phase 2の初期部品としてSpscQueue（release/acquire公開、満杯/空でfalse、待機なし）とAudioBufferPool（固定planar float32、mono/stereo、世代付きhandle）を実装した。容量はテンプレートで指定し、起動前に構築・全sample領域へ書込みする。ページ常駐は保証しない。貸出は範囲内sampleをゼロ初期化し、最大2×MaxFrames回に制限する。返却後のspan利用は禁止。世代上限のslotは再利用せず退役させる。プール不足・無効サイズはfalseとし出力handleを保持、無効handleのviewは空、二重返却はfalse。sampleを共有するクロススレッド所有権、packet adapter、high-water再同期は未実装。
@@ -135,12 +135,12 @@ clock master切替えでは旧driver停止→ACK→clock epoch更新→SRC/対�
 
 処理順序は、format conversion→timestamp/clock adapter→SRC→channel trim/common DSP→独立send gain/pan/mute/solo→Bus加算→Bus DSP→meter→sink adapter。
 
-DSPの概念APIは以下とする。spanは借用メモリーで、process中の保持や再確保をしない。
+実装済みのDSP共通APIは以下とする。spanは借用メモリーで、process中の保持や再確保をしない。processの数値Statusで未prepare・形状異常・非有限入力・overflowを通知し、RTログを行わない。
 
 ```cpp
 struct IAudioProcessor {
-    virtual Status prepare(const ProcessSpec&) = 0; // 非RT
-    virtual void process(AudioBlockView block) noexcept = 0;
+    virtual ProcessorStatus prepare(ProcessSpec spec) = 0; // 非RT、停止中
+    virtual ProcessorStatus process(AudioBlockView block) noexcept = 0;
     virtual void reset() noexcept = 0; // 有界、停止中または境界
     virtual std::uint32_t latencyFrames() const noexcept = 0;
     virtual ~IAudioProcessor() = default; // 破棄は非RT
@@ -148,6 +148,14 @@ struct IAudioProcessor {
 ```
 
 ProcessSpecはrate、maxBlockFrames、channel layoutを含む。大きな状態のresetは非RTの新instanceへ交換する。prepareは最大入力に対応するメモリーを用意し、実行中に処理サイズへ追従して確保しない。
+
+Phase 2のProcessSpecは48kHz、最大1〜256frames、mono/stereoのみ。AudioBlockView/ConstAudioBlockViewは所有しないspanで、異なるchannelの使用領域の重なりを拒否する。無効block/未prepare時は入力メモリーを変更せずStatusを返す。呼出し側は失敗した信号を送出しない。
+
+GainProcessorは共通APIを実装し、latencyFrames=0。prepare/reset後はgain0、非RTのgainFromDbで−60〜+6dBを変換し、Engine境界でapplyGainする。applyGainは0または0.001〜2の有限振幅だけを受け付け、240sampleで変更する。無効spec/parameterは以前の状態を保持。NaN/Infは当該block全体を無音、float overflowは該当sampleを無音にしてStatusを返す。subnormal入出力はゼロ。
+
+Meterは信号を変更しない別コンポーネント。48kHzの2400frames（50ms）ごとにchannel別sample peakとRMSを発行する。窓はblock分割に依存しない。NaN/Infは計測上0として窓内invalidSamplesを記録、subnormalは0、RMSのfloat変換を有限範囲に制限する。true peak、LUFS、表示用release/holdは未実装。8窓容量の専用SPSCをaudioがproduce、UI/diagnosticsの単一consumerがtryReadする。満杯時は新規窓をdropし、後続の成功したsnapshotへ累積droppedWindowsを添付する。sequenceとdrop数はuint64最大で飽和。prepareは開始前の1回だけ、再初期化は両スレッド停止後に新instanceを用意する。UIにはまだ接続しない。
+
+AudioClockはEngine所有の内部48kHz frame位置とepochのみを扱う。advanceは0〜256frames、uint64 overflowは拒否し状態を保持。100ns変換は絶対frame位置を商・余りで計算して切り捨て、blockごとの丸め誤差を累積しない。変換overflow時は出力値を保持。停止後のrestartEpochでepoch更新とframe位置を初期化し、epoch上限で再開を拒否する。IAudioClock/QPCへの写像、時刻ジャンプ検出、drift推定・SRCは後続の同期部品であり、この内部Clockの機能ではない。
 
 gain変更は初期5ms線形amp rampを候補とし、muteも短くrampする。緊急ミュートは最大1ms候補の短いrampで即応し、実際の発効は現在のservice境界とendpoint滞留に依存する。0ms保証はしない。NaN/InfをBusへ伝播させない。入力異常時は該当sourceを無音化しカウントする。
 

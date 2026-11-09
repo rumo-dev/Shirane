@@ -21,7 +21,9 @@ Phase 0・1はローカルGUI・実機確認とGitHub CIのDebug/Release単体�
 
 Phase 2着手: audio/coreにSpscQueueとAudioBufferPoolを追加。固定容量・OS非依存の基礎部品のみで、UI/DeviceServiceには未接続。キューはproducer/consumerを各1スレッドに固定し、プールの貸出・view取得・返却は同じ所有スレッドで行う。プールの生存中はアドレスを固定し、貸出先が終了するまで破棄しない。コピー可能なhandleは所有権移譲プロトコルではなく、他スレッドへの転送はまだ実装しない。
 
-Phase 2追加: audio/dspのGainRamp、audio/mixerのMixerを実装。非RTのPreparedMixerParameters::prepareがdB・panとBus別soloを検証・係数化し、将来のEngine所有スレッドがapply/processを呼ぶ。現時点では単体試験からのみ使用する。Mixerは16固定source slot、2つのstereo出力、全ランプ状態を所有する。入力spanを保持せず、出力は次回process/resetまでの借用とする。UIから可変状態を直接操作しない。唯一の並行操作requestEmergencyMuteはlock-free atomic latchを立て、解除は停止後resetだけに限定する。Control→Engineキューとの結合、Graph ACK、Clock/Meter、汎用DSP APIは未実装。
+Phase 2追加: audio/dspのGainRamp、audio/mixerのMixerを実装。非RTのPreparedMixerParameters::prepareがdB・panとBus別soloを検証・係数化し、将来のEngine所有スレッドがapply/processを呼ぶ。現時点では単体試験からのみ使用する。Mixerは16固定source slot、2つのstereo出力、全ランプ状態を所有する。入力spanを保持せず、出力は次回process/resetまでの借用とする。UIから可変状態を直接操作しない。唯一の並行操作requestEmergencyMuteはlock-free atomic latchを立て、解除は停止後resetだけに限定する。Control→Engineキューとの結合、Graph ACKは未実装。
+
+Phase 2追加（2026-11-09）: AudioClockは内部48kHz frame/epochを管理し、device clockやQPCとの同期は行わない。IAudioProcessorとGainProcessorを追加し、prepare/破棄は非RT、process/resetは所有スレッドで有界処理する。Meterは50ms窓のpeak/RMSを専用固定容量SPSCで発行し、単一consumerへ所有コピーを渡す。満杯でもaudioを待たせない。mutable状態をUIへ公開せず、現在は接続単体試験のみ。長時間転送とPhase 2全体の受入確認を残す。
 
 設計版1.0 / 2026-11-07。開発規約はリポジトリルートの `AGENTS.md`、音声詳細は同階層の `AUDIO_ENGINE.md` を参照。本文の設定値は初期設計で、性能保証ではない。
 

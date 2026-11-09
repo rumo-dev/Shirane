@@ -118,6 +118,7 @@ Phase 1の列挙・通知登録・選択保存を実装しました。2026-11-08
 - Phase 2着手: 固定容量pool/SPSCとcoreテスト6件を追加。ローカルDebug/Releaseは各30/30成功。実音声には未接続で、Mixer/DSPなどPhase 2全体の受入はまだです。
 - Phase 2追加: GainRamp・16入力のMonitor/Stream Mixerを実装。gain/pan/mute/solo、240sampleの通常ランプ、48sampleの緊急ミュートを検証し、ローカルDebug/Release各40/40成功。pan中央は左右各−3.01dB、左右端では反対側をゼロにするequal-power balanceです。Phase 2全体は未受入です。
 - TODO Phase 3以降: 実音声取得と再生。受入は設計文書の各Phaseに従います。
+- Phase 2追加: 内部48kHz Clock、50ms peak/RMS Meter、DSP共通APIとGainProcessorを実装。接続テストを含めローカルDebug/Release各51/51成功。Meterは画面未接続。次は長時間転送の検証とPhase 2全体の受入確認です。
 
 [開発規約](AGENTS.md) · [全体設計](docs/ARCHITECTURE.md) · [音声契約](docs/AUDIO_ENGINE.md)
 
